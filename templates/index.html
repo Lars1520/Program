@@ -1,0 +1,2155 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>联邦学习平台</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #667eea;
+            --primary-dark: #5a6fd8;
+            --secondary: #764ba2;
+            --accent: #f093fb;
+            --success: #4CAF50;
+            --danger: #f44336;
+            --warning: #ff9800;
+            --dark: #2d3748;
+            --light: #f8f9fa;
+            --gray: #718096;
+            --sidebar-width: 260px;
+            --header-height: 70px;
+        }
+
+        /* 推理页面布局优化 */
+        .step-left-panel,
+        .step-right-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .step-left-panel {
+            min-height: 400px;
+        }
+
+        .step-right-panel {
+            min-height: 400px;
+        }
+
+        /* 确保内容区域高度一致 */
+        .inference-step-content>div {
+            height: 100%;
+        }
+
+        /* 文件上传区域高度优化 */
+        .file-upload {
+            min-height: 200px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* 文本区域高度优化 */
+        #text-description {
+            min-height: 200px;
+            resize: vertical;
+        }
+
+        /* 结果卡片网格布局优化 */
+        .result-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+        }
+
+        /* 分析内容区域优化 */
+        #analysis-content {
+            max-height: 300px;
+            min-height: 200px;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e4edf5 100%);
+            color: var(--dark);
+            min-height: 100vh;
+            display: flex;
+        }
+
+        /* 侧边栏样式 */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            height: 100vh;
+            position: fixed;
+            box-shadow: 4px 0 15px rgba(0, 0, 0, 0.1);
+            z-index: 100;
+            overflow-y: auto;
+        }
+
+        .sidebar-header {
+            padding: 1.5rem;
+            text-align: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .sidebar-header h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .sidebar-header p {
+            font-size: 0.85rem;
+            opacity: 0.8;
+        }
+
+        .sidebar-nav {
+            padding: 1.5rem 0;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            padding: 1rem 1.5rem;
+            color: white;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            border-left: 4px solid transparent;
+        }
+
+        .nav-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-left-color: var(--accent);
+        }
+
+        .nav-item.active {
+            background: rgba(255, 255, 255, 0.15);
+            border-left-color: white;
+        }
+
+        .nav-item i {
+            margin-right: 0.75rem;
+            font-size: 1.2rem;
+            width: 24px;
+            text-align: center;
+        }
+
+        /* 主内容区域 */
+        .main-content {
+            flex: 1;
+            margin-left: var(--sidebar-width);
+            padding: 2rem;
+            min-height: 100vh;
+        }
+
+        .header {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem 2rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            margin-bottom: 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--dark);
+        }
+
+        .header p {
+            color: var(--gray);
+            margin-top: 0.25rem;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .user-avatar {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+
+        /* 卡片样式 */
+        .card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            padding: 2rem;
+            margin-bottom: 2rem;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid #eee;
+        }
+
+        .card-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--dark);
+        }
+
+        /* 表单样式 */
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: var(--dark);
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 2px solid #e1e5e9;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            background: #fafbfc;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary);
+            background: white;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .form-row {
+            display: flex;
+            gap: 1.5rem;
+        }
+
+        .form-col {
+            flex: 1;
+        }
+
+        /* 按钮样式 */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, var(--success) 0%, #45a049 100%);
+            color: white;
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, var(--danger) 0%, #da190b 100%);
+            color: white;
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 2px solid var(--primary);
+            color: var(--primary);
+        }
+
+        .btn-outline:hover {
+            background: var(--primary);
+            color: white;
+        }
+
+        /* 任务创建步骤指示器 */
+        .steps {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 2rem;
+            position: relative;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .step {
+            flex: 1;
+            text-align: center;
+            position: relative;
+            z-index: 2;
+            min-width: 120px;
+        }
+
+        .steps::before {
+            content: '';
+            position: absolute;
+            top: 20px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: #e1e5e9;
+            z-index: 1;
+        }
+
+        .step {
+            flex: 1;
+            text-align: center;
+            position: relative;
+            z-index: 2;
+        }
+
+        .step-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: white;
+            border: 2px solid #e1e5e9;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 0.5rem;
+            font-weight: bold;
+            color: var(--gray);
+            transition: all 0.3s ease;
+        }
+
+        .step.active .step-icon {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: white;
+        }
+
+        .step.completed .step-icon {
+            background: var(--success);
+            border-color: var(--success);
+            color: white;
+        }
+
+        .step-label {
+            font-size: 0.9rem;
+            color: var(--gray);
+        }
+
+        .step.active .step-label {
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        /* 任务列表样式 */
+        .task-list {
+            display: grid;
+            gap: 1.5rem;
+        }
+
+        .task-item {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-left: 4px solid var(--primary);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .task-item:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .task-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .task-id {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: var(--primary);
+        }
+
+        .task-status {
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .status-pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-running {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .status-completed {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-failed {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .task-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .detail-item {
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .detail-label {
+            font-weight: 600;
+            color: var(--gray);
+        }
+
+        .task-actions {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: auto;
+        }
+
+        /* 图表容器 */
+        .chart-container {
+            width: 100%;
+            height: 400px;
+            margin-top: 2rem;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        /* 推理页面样式 */
+        .inference-container {
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        .inference-step-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            align-items: start;
+        }
+
+        @media (max-width: 1024px) {
+            .inference-step-content {
+                grid-template-columns: 1fr;
+                gap: 1.5rem;
+            }
+        }
+
+        .inference-form,
+        .inference-result {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+
+        .file-upload {
+            border: 2px dashed #ddd;
+            padding: 2rem;
+            text-align: center;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: #fafbfc;
+            min-height: 200px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .file-upload:hover {
+            border-color: var(--primary);
+            background: #f0f2ff;
+        }
+
+        .file-upload.dragover {
+            border-color: var(--primary);
+            background: #e6e9ff;
+        }
+
+        .preview-image {
+            max-width: 100%;
+            max-height: 180px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        /* 任务信息面板样式优化 */
+        #task-info-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.5rem;
+        }
+
+        #task-info-content p {
+            margin: 0;
+            padding: 0.25rem 0;
+            font-size: 0.9rem;
+        }
+
+        /* 推理结果样式优化 */
+        .result-item {
+            margin-bottom: 1rem;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid var(--primary);
+        }
+
+        .result-label {
+            font-weight: 600;
+            color: var(--dark);
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .result-value {
+            color: var(--gray);
+            line-height: 1.5;
+        }
+
+
+        /* 响应式设计 */
+        @media (max-width: 1024px) {
+            .inference-container {
+                grid-template-columns: 1fr;
+            }
+
+            .form-row {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .inference-step-content {
+                grid-template-columns: 1fr;
+                gap: 1.5rem;
+            }
+
+            .step-left-panel,
+            .step-right-panel {
+                min-height: auto;
+            }
+
+            .result-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 70px;
+                overflow: visible;
+            }
+
+            .sidebar-header h2,
+            .sidebar-header p,
+            .nav-item span {
+                display: none;
+            }
+
+            .nav-item {
+                justify-content: center;
+                padding: 1rem;
+            }
+
+            .nav-item i {
+                margin-right: 0;
+                font-size: 1.5rem;
+            }
+
+            .main-content {
+                margin-left: 70px;
+            }
+
+            .steps {
+                flex-direction: column;
+                gap: 1rem;
+                max-width: 100%;
+            }
+
+            .step {
+                min-width: auto;
+            }
+
+        }
+
+        /* 加载动画样式 */
+        .spinner-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        .spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 1rem;
+        }
+
+        .spinner-text {
+            font-size: 1.1rem;
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* 进度步骤样式 */
+        .progress-steps {
+            display: flex;
+            justify-content: space-between;
+            position: relative;
+            max-width: 400px;
+            margin: 0 auto;
+        }
+
+        .progress-steps::before {
+            content: '';
+            position: absolute;
+            top: 15px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: #e1e5e9;
+            z-index: 1;
+        }
+
+        .step {
+            position: relative;
+            z-index: 2;
+            text-align: center;
+            font-size: 0.8rem;
+            color: var(--gray);
+            transition: all 0.3s ease;
+        }
+
+        .step::before {
+            content: '';
+            width: 12px;
+            height: 12px;
+            background: #e1e5e9;
+            border-radius: 50%;
+            display: block;
+            margin: 0 auto 0.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .step.active {
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        .step.active::before {
+            background: var(--primary);
+            transform: scale(1.2);
+        }
+
+        /* 结果卡片样式优化 */
+        .result-grid {
+            display: grid;
+            gap: 1rem;
+        }
+
+        .result-card {
+            background: white;
+            border-radius: 8px;
+            padding: 1.25rem;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            border-left: 4px solid var(--primary);
+        }
+
+        .result-card.confidence {
+            border-left-color: var(--success);
+        }
+
+        .result-card.info {
+            border-left-color: var(--primary);
+        }
+
+        .result-card.time {
+            border-left-color: var(--warning);
+        }
+
+        .result-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 0.75rem;
+        }
+
+        .result-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 0.75rem;
+            color: white;
+            font-size: 0.9rem;
+        }
+
+        .result-title {
+            font-weight: 600;
+            color: var(--dark);
+            font-size: 0.95rem;
+        }
+
+        .result-value {
+            color: var(--dark);
+            font-size: 1.1rem;
+            font-weight: 600;
+            line-height: 1.4;
+        }
+
+        .confidence-value {
+            color: var(--success);
+            font-size: 1.3rem;
+        }
+
+        .time-value {
+            color: var(--warning);
+        }
+
+        /* 分析内容样式 */
+        .analysis-section {
+            margin-bottom: 1rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid #eee;
+        }
+
+        .analysis-section:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+        }
+
+        .analysis-title {
+            font-weight: 600;
+            color: var(--dark);
+            margin-bottom: 0.5rem;
+            font-size: 0.95rem;
+        }
+
+        /* 详细分析区域样式 */
+        #analysis-content {
+            background: #f8f9fa;
+            padding: 1.25rem;
+            border-radius: 8px;
+            border-left: 4px solid var(--primary);
+            white-space: pre-wrap;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-size: 0.95rem;
+            line-height: 1.6;
+            color: var(--dark);
+            max-height: 400px;
+            overflow-y: auto;
+            word-wrap: break-word;
+        }
+
+        /* 进度步骤样式改进 */
+        .progress-steps {
+            display: flex;
+            justify-content: space-between;
+            position: relative;
+            max-width: 500px;
+            margin: 2rem auto 1rem;
+        }
+
+        .progress-steps::before {
+            content: '';
+            position: absolute;
+            top: 15px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: #e1e5e9;
+            z-index: 1;
+        }
+
+        .progress-steps .step {
+            position: relative;
+            z-index: 2;
+            text-align: center;
+            font-size: 0.85rem;
+            color: var(--gray);
+            transition: all 0.3s ease;
+            background: white;
+            padding: 0.5rem;
+            border-radius: 8px;
+            min-width: 100px;
+        }
+
+        .progress-steps .step::before {
+            content: '';
+            width: 12px;
+            height: 12px;
+            background: #e1e5e9;
+            border-radius: 50%;
+            display: block;
+            margin: 0 auto 0.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .progress-steps .step.active {
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        .progress-steps .step.active::before {
+            background: var(--primary);
+            transform: scale(1.2);
+        }
+
+        .progress-steps .step.completed {
+            color: var(--success);
+        }
+
+        .progress-steps .step.completed::before {
+            background: var(--success);
+            transform: scale(1.2);
+        }
+
+        /* 中间结果样式 */
+        #intermediate-results {
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- 侧边导航栏 -->
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <h2>联邦学习平台</h2>
+            <p>分布式机器学习</p>
+        </div>
+        <div class="sidebar-nav">
+            <a href="/" class="nav-item"> <!-- 添加返回首页链接 -->
+                <i class="fas fa-home"></i>
+                <span>返回首页</span>
+            </a>
+            <a href="#" class="nav-item active" onclick="showTab('create-task')">
+                <i class="fas fa-plus-circle"></i>
+                <span>创建任务</span>
+            </a>
+            <a href="#" class="nav-item" onclick="showTab('task-list')">
+                <i class="fas fa-list"></i>
+                <span>任务列表</span>
+            </a>
+            <a href="#" class="nav-item" onclick="showTab('task-monitor')">
+                <i class="fas fa-chart-line"></i>
+                <span>任务监控</span>
+            </a>
+            <a href="#" class="nav-item" onclick="showTab('inference')">
+                <i class="fas fa-brain"></i>
+                <span>场景推理</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- 主内容区域 -->
+    <div class="main-content">
+        <div class="header">
+            <div>
+                <h1>联邦学习平台</h1>
+                <p>分布式机器学习任务管理与监控系统</p>
+            </div>
+            <div class="user-info">
+                <div class="user-avatar">AD</div>
+                <div>
+                    <div style="font-weight: 600;">管理员</div>
+                    <div style="font-size: 0.85rem; color: var(--gray);">在线</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 创建任务标签页 -->
+        <div id="create-task" class="tab-content active">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">创建联邦学习任务</div>
+                    <div class="steps">
+                        <div class="step active" id="step1">
+                            <div class="step-icon">1</div>
+                            <div class="step-label">基本信息</div>
+                        </div>
+                        <div class="step" id="step2">
+                            <div class="step-icon">2</div>
+                            <div class="step-label">算法配置</div>
+                        </div>
+                        <div class="step" id="step3">
+                            <div class="step-icon">3</div>
+                            <div class="step-label">高级设置</div>
+                        </div>
+                    </div>
+                </div>
+
+                <form id="task-form">
+                    <div class="step-content" id="step1-content">
+                        <div class="form-group">
+                            <label class="form-label" for="task-id">任务ID:</label>
+                            <input type="text" id="task-id" class="form-control" name="task_id"
+                                placeholder="例如: my_fed_task_001" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="model-type">模型类型:</label>
+                            <select id="model-type" class="form-control" name="model_type" required>
+                                <option value="">请选择模型类型</option>
+                                <option value="CNN">卷积神经网络 (CNN)</option>
+                                <option value="ResNet">残差网络 (ResNet)</option>
+                                <option value="MLP">多层感知机 (MLP)</option>
+                                <option value="LSTM">长短期记忆网络 (LSTM)</option>
+                                <option value="Transformer">Transformer</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="dataset">数据集:</label>
+                            <select id="dataset" class="form-control" name="dataset" required>
+                                <option value="">请选择数据集</option>
+                                <option value="MNIST">MNIST 手写数字</option>
+                                <option value="CIFAR-10">CIFAR-10</option>
+                                <option value="Fashion-MNIST">Fashion-MNIST</option>
+                                <option value="ImageNet">ImageNet</option>
+                                <option value="Custom">自定义数据集</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <button type="button" class="btn btn-primary" onclick="nextStep(1)">
+                                下一步 <i class="fas fa-arrow-right"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="step-content" id="step2-content" style="display: none;">
+                        <div class="form-group">
+                            <label class="form-label" for="aggregation-algorithm">聚合算法:</label>
+                            <select id="aggregation-algorithm" class="form-control" name="aggregation_algorithm"
+                                required>
+                                <option value="">请选择聚合算法</option>
+                                <option value="FedAvg">FedAvg</option>
+                                <option value="FedProx">FedProx</option>
+                                <option value="FedNova">FedNova</option>
+                                <option value="SCAFFOLD">SCAFFOLD</option>
+                                <option value="FedAdam">FedAdam</option>
+                                <option value="FedTrimmedAvg">FedTrimmedAvg</option>
+                            </select>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-col">
+                                <div class="form-group">
+                                    <label class="form-label" for="aggregation-rounds">聚合轮次:</label>
+                                    <input type="number" id="aggregation-rounds" class="form-control"
+                                        name="aggregation_rounds" min="10" max="1000" value="50" required>
+                                </div>
+                            </div>
+                            <div class="form-col">
+                                <div class="form-group">
+                                    <label class="form-label" for="learning-rate">学习率:</label>
+                                    <input type="number" id="learning-rate" class="form-control" name="learning_rate"
+                                        step="0.0001" min="0.0001" max="1" value="0.01" required>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="optimizer">优化器:</label>
+                            <select id="optimizer" class="form-control" name="optimizer" required>
+                                <option value="">请选择优化器</option>
+                                <option value="SGD">SGD</option>
+                                <option value="Adam">Adam</option>
+                                <option value="AdamW">AdamW</option>
+                                <option value="RMSprop">RMSprop</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group" style="display: flex; gap: 1rem;">
+                            <button type="button" class="btn btn-outline" onclick="prevStep(2)">
+                                <i class="fas fa-arrow-left"></i> 上一步
+                            </button>
+                            <button type="button" class="btn btn-primary" onclick="nextStep(2)">
+                                下一步 <i class="fas fa-arrow-right"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="step-content" id="step3-content" style="display: none;">
+                        <div class="form-group">
+                            <label class="form-label" for="privacy-strategy">隐私保护策略:</label>
+                            <select id="privacy-strategy" class="form-control" name="privacy_strategy">
+                                <option value="">无隐私保护</option>
+                                <option value="differential_privacy">差分隐私</option>
+                                <option value="secure_aggregation">安全聚合</option>
+                                <option value="homomorphic_encryption">同态加密</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="client-count">客户端数量:</label>
+                            <input type="number" id="client-count" class="form-control" name="client_count" min="1"
+                                max="100" value="5" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="batch-size">批次大小:</label>
+                            <input type="number" id="batch-size" class="form-control" name="batch_size" min="8"
+                                max="512" value="32" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">
+                                <input type="checkbox" id="early-stopping" name="early_stopping"> 启用早停
+                            </label>
+                        </div>
+
+                        <div class="form-group" style="display: flex; gap: 1rem;">
+                            <button type="button" class="btn btn-outline" onclick="prevStep(3)">
+                                <i class="fas fa-arrow-left"></i> 上一步
+                            </button>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-rocket"></i> 创建任务
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- 任务列表标签页 -->
+        <div id="task-list" class="tab-content" style="display: none;">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">任务列表</div>
+                    <button class="btn btn-primary" onclick="loadTasks()">
+                        <i class="fas fa-sync-alt"></i> 刷新任务
+                    </button>
+                </div>
+                <div id="tasks-container" class="task-list">
+                    <!-- 任务列表将在这里动态生成 -->
+                </div>
+            </div>
+        </div>
+
+        <!-- 任务监控标签页 -->
+        <div id="task-monitor" class="tab-content" style="display: none;">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">任务监控</div>
+                </div>
+                <div id="selected-task-info">
+                    <p>请从任务列表中选择一个任务进行监控</p>
+                </div>
+                <div id="metrics-container" class="metrics-grid">
+                    <!-- 图表将在这里生成 -->
+                </div>
+            </div>
+        </div>
+
+        <!-- 场景推理标签页 -->
+        <div id="inference" class="tab-content" style="display: none;">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">场景推理</div>
+                    <div class="steps">
+                        <div class="step active" id="inference-step1">
+                            <div class="step-icon">1</div>
+                            <div class="step-label">选择任务</div>
+                        </div>
+                        <div class="step" id="inference-step2">
+                            <div class="step-icon">2</div>
+                            <div class="step-label">输入数据</div>
+                        </div>
+                        <div class="step" id="inference-step3">
+                            <div class="step-icon">3</div>
+                            <div class="step-label">推理结果</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="inference-container">
+                    <!-- 步骤1：选择任务 -->
+                    <div class="step-content inference-step-content" id="inference-step1-content">
+                        <div class="step-left-panel">
+                            <div class="form-group">
+                                <label class="form-label" for="inference-task">选择训练任务:</label>
+                                <select id="inference-task" class="form-control" name="inference_task" required
+                                    onchange="updateTaskInfo()">
+                                    <option value="">请选择已完成的任务</option>
+                                    <!-- 任务选项将通过JavaScript动态加载 -->
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <button type="button" class="btn btn-primary" onclick="nextInferenceStep(1)"
+                                    style="width: 100%;">
+                                    下一步 <i class="fas fa-arrow-right"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="step-right-panel">
+                            <!-- 任务信息面板 -->
+                            <div id="task-info-panel" class="card" style="display: none; height: fit-content;">
+                                <div class="card-header" style="padding: 1rem;">
+                                    <div class="card-title" style="font-size: 1.1rem;">任务信息</div>
+                                </div>
+                                <div id="task-info-content" style="padding: 1rem;">
+                                    <!-- 任务信息将动态加载 -->
+                                </div>
+                            </div>
+
+                            <!-- 添加说明卡片 -->
+                            <div class="card" style="background: linear-gradient(135deg, #f8f9ff 0%, #f0f2ff 100%);">
+                                <div class="card-header" style="padding: 1rem; border-bottom: 1px solid #eaefff;">
+                                    <div class="card-title" style="font-size: 1.1rem; color: var(--primary);">
+                                        <i class="fas fa-info-circle"></i> 使用说明
+                                    </div>
+                                </div>
+                                <div style="padding: 1rem;">
+                                    <p style="margin-bottom: 0.5rem; font-size: 0.9rem; color: var(--dark);">
+                                        • 选择已完成的训练任务进行推理
+                                    </p>
+                                    <p style="margin-bottom: 0.5rem; font-size: 0.9rem; color: var(--dark);">
+                                        • 确保任务状态为"已完成"
+                                    </p>
+                                    <p style="margin-bottom: 0; font-size: 0.9rem; color: var(--dark);">
+                                        • 准确率越高的模型推理效果越好
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 步骤2：输入数据 -->
+                    <div class="step-content inference-step-content" id="inference-step2-content"
+                        style="display: none;">
+                        <div class="step-left-panel">
+                            <div class="form-group">
+                                <label class="form-label">上传图片 (可选):</label>
+                                <div id="image-upload-area" class="file-upload" ondragover="handleDragOver(event)"
+                                    ondrop="handleDrop(event)" onclick="document.getElementById('file-input').click()">
+                                    <input type="file" id="file-input" accept="image/*" style="display: none"
+                                        onchange="handleFileSelect(event)">
+                                    <div id="upload-placeholder">
+                                        <i class="fas fa-cloud-upload-alt"
+                                            style="font-size: 2rem; color: var(--gray); margin-bottom: 1rem;"></i>
+                                        <p>点击或拖拽图片到这里</p>
+                                        <p style="font-size: 0.8rem; color: var(--gray);">支持 JPG, PNG, GIF 格式</p>
+                                    </div>
+                                    <div id="image-preview-container" style="display: none; text-align: center;">
+                                        <div style="position: relative; display: inline-block;">
+                                            <img id="image-preview" class="preview-image" alt="预览图片">
+                                            <button type="button" class="btn btn-danger" onclick="removeImage()"
+                                                style="position: absolute; top: 5px; right: 5px; padding: 0.25rem 0.5rem; font-size: 0.8rem;">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="step-right-panel">
+                            <div class="form-group">
+                                <label class="form-label" for="text-description">文字描述:</label>
+                                <textarea id="text-description" class="form-control" name="text_description" rows="8"
+                                    placeholder="请输入对场景的详细文字描述..." required></textarea>
+                            </div>
+
+                            <div class="form-group" style="display: flex; gap: 1rem; margin-top: auto;">
+                                <button type="button" class="btn btn-outline" onclick="prevInferenceStep(2)"
+                                    style="flex: 1;">
+                                    <i class="fas fa-arrow-left"></i> 上一步
+                                </button>
+                                <button type="button" class="btn btn-primary" onclick="nextInferenceStep(2)"
+                                    style="flex: 1;">
+                                    下一步 <i class="fas fa-arrow-right"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 步骤3：推理结果 -->
+                    <div class="step-content inference-step-content" id="inference-step3-content"
+                        style="display: none;">
+                        <div class="step-left-panel">
+                            <!-- 加载动画区域 -->
+                            <div id="loading-animation" style="display: none; text-align: center; padding: 2rem;">
+                                <div class="spinner-container">
+                                    <div class="spinner"></div>
+                                    <div class="spinner-text">AI正在分析中...</div>
+                                </div>
+                                <div class="progress-steps">
+                                    <div class="step" id="step-image">图像处理</div>
+                                    <div class="step" id="step-model">模型推理</div>
+                                    <div class="step" id="step-report">报告生成</div>
+                                </div>
+
+                                <!-- 中间结果展示区域 -->
+                                <div id="intermediate-results"
+                                    style="margin-top: 2rem; text-align: left; display: none;">
+                                    <div class="result-card" style="margin-bottom: 1rem;">
+                                        <div class="result-header">
+                                            <div class="result-icon">
+                                                <i class="fas fa-brain"></i>
+                                            </div>
+                                            <div class="result-title">模型推理结果</div>
+                                        </div>
+                                        <div id="model-output" class="result-value"
+                                            style="color: var(--dark); font-size: 0.95rem; line-height: 1.5;">
+                                            <!-- 模型输出将在这里显示 -->
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 最终结果内容 -->
+                            <div id="result-content">
+                                <div style="text-align: center; color: var(--gray); padding: 2rem;">
+                                    <i class="fas fa-chart-bar" style="font-size: 3rem; margin-bottom: 1rem;"></i>
+                                    <p>推理结果将在这里显示</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="step-right-panel">
+                            <!-- 详细分析区域 -->
+                            <div id="detailed-analysis" style="display: none; height: 100%;">
+                                <div class="card" style="height: 100%;">
+                                    <div class="card-header">
+                                        <div class="card-title">详细分析</div>
+                                    </div>
+                                    <div id="analysis-content" style="height: 300px; overflow-y: auto; padding: 1rem;">
+                                        <!-- 分析内容 -->
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- PDF报告预览和下载区域 -->
+                            <div id="pdf-report" style="display: none; margin-top: 1rem;">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <div class="card-title">诊断报告</div>
+                                    </div>
+                                    <div style="padding: 1rem;">
+                                        <div
+                                            style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+                                            <button class="btn btn-outline" onclick="previewPDF()">
+                                                <i class="fas fa-eye"></i> 预览报告
+                                            </button>
+                                            <button class="btn btn-success" onclick="downloadPDF()">
+                                                <i class="fas fa-download"></i> 下载报告
+                                            </button>
+                                        </div>
+                                        <div id="pdf-preview-container" style="margin-top: 1rem; display: none;">
+                                            <iframe id="pdf-preview" width="100%" height="300px"
+                                                style="border: 1px solid #ddd; border-radius: 5px;"></iframe>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-group" style="display: flex; gap: 1rem; margin-top: auto;">
+                                <button type="button" class="btn btn-outline" onclick="prevInferenceStep(3)"
+                                    style="flex: 1;">
+                                    <i class="fas fa-arrow-left"></i> 上一步
+                                </button>
+                                <button type="button" class="btn btn-primary" onclick="startInference()"
+                                    id="inference-btn" style="flex: 1;">
+                                    <i class="fas fa-play"></i> 开始推理
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    </div>
+
+    <script>
+        let currentTask = null;
+        let charts = {};
+        let currentImageFile = null;
+        let currentReportUrl = null;
+        let allTasks = [];
+
+        // 推理页面步骤导航功能
+        function nextInferenceStep(currentStep) {
+            document.getElementById(`inference-step${currentStep}-content`).style.display = 'none';
+            document.getElementById(`inference-step${currentStep + 1}-content`).style.display = 'block';
+
+            document.getElementById(`inference-step${currentStep}`).classList.remove('active');
+            document.getElementById(`inference-step${currentStep + 1}`).classList.add('active');
+        }
+
+        function prevInferenceStep(currentStep) {
+            document.getElementById(`inference-step${currentStep}-content`).style.display = 'none';
+            document.getElementById(`inference-step${currentStep - 1}-content`).style.display = 'block';
+
+            document.getElementById(`inference-step${currentStep}`).classList.remove('active');
+            document.getElementById(`inference-step${currentStep - 1}`).classList.add('active');
+        }
+
+        // 修改推理页面初始化函数
+        function initializeInferencePage() {
+            // 重置推理步骤
+            document.querySelectorAll('#inference .step-content').forEach(content => {
+                content.style.display = 'none';
+            });
+            document.querySelectorAll('#inference .step').forEach(step => {
+                step.classList.remove('active');
+            });
+
+            document.getElementById('inference-step1').classList.add('active');
+            document.getElementById('inference-step1-content').style.display = 'block';
+
+            loadCompletedTasks();
+        }
+
+        // 步骤导航功能
+        function nextStep(currentStep) {
+            document.getElementById(`step${currentStep}-content`).style.display = 'none';
+            document.getElementById(`step${currentStep + 1}-content`).style.display = 'block';
+
+            document.getElementById(`step${currentStep}`).classList.remove('active');
+            document.getElementById(`step${currentStep + 1}`).classList.add('active');
+        }
+
+        function prevStep(currentStep) {
+            document.getElementById(`step${currentStep}-content`).style.display = 'none';
+            document.getElementById(`step${currentStep - 1}-content`).style.display = 'block';
+
+            document.getElementById(`step${currentStep}`).classList.remove('active');
+            document.getElementById(`step${currentStep - 1}`).classList.add('active');
+        }
+
+        // 标签页切换功能
+        function showTab(tabName) {
+            // 隐藏所有标签页内容
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.style.display = 'none';
+                content.classList.remove('active');
+            });
+
+            // 移除所有导航项的激活状态
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active');
+            });
+
+            // 显示选中的标签页内容
+            const targetTab = document.getElementById(tabName);
+            if (targetTab) {
+                targetTab.style.display = 'block';
+                targetTab.classList.add('active');
+            }
+
+            // 激活对应的导航项
+            const navItems = document.querySelectorAll('.nav-item');
+            navItems.forEach(item => {
+                if (item.textContent.includes(getTabName(tabName))) {
+                    item.classList.add('active');
+                }
+            });
+
+            // 如果切换到任务列表，自动加载任务
+            if (tabName === 'task-list') {
+                loadTasks();
+            }
+
+            // 如果切换到推理页面，初始化步骤
+            if (tabName === 'inference') {
+                initializeInferencePage();
+            }
+        }
+
+        // 辅助函数：根据标签页ID获取显示名称
+        function getTabName(tabId) {
+            const tabMap = {
+                'create-task': '创建任务',
+                'task-list': '任务列表',
+                'task-monitor': '任务监控',
+                'inference': '场景推理'
+            };
+            return tabMap[tabId] || '';
+        }
+
+        // 初始化页面
+        function initializePage() {
+            showTab('create-task');
+            document.getElementById('step1').classList.add('active');
+            document.getElementById('step1-content').style.display = 'block';
+            loadTasks();
+        }
+
+        // 创建任务表单提交
+        document.getElementById('task-form').addEventListener('submit', async function (e) {
+            e.preventDefault();
+
+            const formData = new FormData(e.target);
+            const taskConfig = Object.fromEntries(formData.entries());
+
+            // 转换数值类型
+            taskConfig.aggregation_rounds = parseInt(taskConfig.aggregation_rounds);
+            taskConfig.learning_rate = parseFloat(taskConfig.learning_rate);
+
+            try {
+                const response = await fetch('/api/tasks', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(taskConfig)
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showAlert('任务创建成功！', 'success');
+                    e.target.reset();
+                    // 重置步骤
+                    document.querySelectorAll('.step-content').forEach(content => {
+                        content.style.display = 'none';
+                    });
+                    document.querySelectorAll('.step').forEach(step => {
+                        step.classList.remove('active', 'completed');
+                    });
+                    document.getElementById('step1').classList.add('active');
+                    document.getElementById('step1-content').style.display = 'block';
+
+                    loadTasks();
+                } else {
+                    showAlert('任务创建失败: ' + result.error, 'error');
+                }
+            } catch (error) {
+                showAlert('网络错误: ' + error.message, 'error');
+            }
+        });
+
+        // 加载任务列表
+        async function loadTasks() {
+            try {
+                const response = await fetch('/api/tasks');
+                allTasks = await response.json();
+
+                const container = document.getElementById('tasks-container');
+                container.innerHTML = '';
+
+                allTasks.forEach(task => {
+                    const taskElement = createTaskElement(task);
+                    container.appendChild(taskElement);
+                });
+            } catch (error) {
+                showAlert('加载任务列表失败: ' + error.message, 'error');
+            }
+        }
+
+        // 创建任务元素
+        function createTaskElement(task) {
+            const div = document.createElement('div');
+            div.className = 'task-item';
+            div.onclick = () => selectTask(task.task_id);
+
+            div.innerHTML = `
+        <div class="task-header">
+            <div class="task-id">${task.task_id}</div>
+            <div class="task-status status-${task.status}">${getStatusText(task.status)}</div>
+        </div>
+        <div class="task-details">
+            <div class="detail-item">
+                <span class="detail-label">聚合算法:</span>
+                <span>${task.aggregation_algorithm}</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">模型类型:</span>
+                <span>${task.model_type || 'CNN'}</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">数据集:</span>
+                <span>${task.dataset || '自定义数据集'}</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">准确率:</span>
+                <span>${task.accuracy ? (task.accuracy * 100).toFixed(1) + '%' : '训练中'}</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">聚合轮次:</span>
+                <span>${task.aggregation_rounds}</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">创建时间:</span>
+                <span>${new Date(task.created_at).toLocaleString()}</span>
+            </div>
+        </div>
+        <div class="task-actions">
+            ${task.status === 'pending' ? `<button class="btn btn-success" onclick="startTask('${task.task_id}', event)">启动任务</button>` : ''}
+            ${task.status === 'completed' ? `<button class="btn" onclick="useTaskForInference('${task.task_id}', event)">用于推理</button>` : ''}
+            <button class="btn btn-outline" onclick="selectTask('${task.task_id}', event)">查看详情</button>
+        </div>
+    `;
+
+            return div;
+        }
+
+        // 获取状态文本
+        function getStatusText(status) {
+            const statusMap = {
+                'pending': '等待中',
+                'running': '运行中',
+                'completed': '已完成',
+                'failed': '失败'
+            };
+            return statusMap[status] || status;
+        }
+
+        // 启动任务
+        async function startTask(taskId, event) {
+            event.stopPropagation();
+
+            if (!confirm(`确定要启动任务 ${taskId} 吗？`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/tasks/${taskId}/start`, {
+                    method: 'POST'
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showAlert('任务启动成功！训练将在后台进行', 'success');
+                    loadTasks();
+
+                    // 5秒后刷新任务状态（模拟训练完成）
+                    setTimeout(() => {
+                        loadTasks();
+                        loadCompletedTasks();
+                    }, 6000);
+                } else {
+                    showAlert('任务启动失败: ' + result.error, 'error');
+                }
+            } catch (error) {
+                showAlert('网络错误: ' + error.message, 'error');
+            }
+        }
+
+        // 使用任务进行推理
+        function useTaskForInference(taskId, event) {
+            if (event) event.stopPropagation();
+
+            showTab('inference');
+
+            // 确保推理页面已初始化
+            setTimeout(() => {
+                const select = document.getElementById('inference-task');
+                select.value = taskId;
+                updateTaskInfo();
+
+                // 自动进入下一步
+                nextInferenceStep(1);
+            }, 100);
+        }
+
+        // 选择任务进行监控
+        async function selectTask(taskId, event) {
+            if (event) {
+                event.stopPropagation();
+            }
+
+            currentTask = taskId;
+            showTab('task-monitor');
+
+            document.getElementById('selected-task-info').innerHTML = `
+        <h3>正在监控任务: ${taskId}</h3>
+        <button class="btn" onclick="loadMetrics('${taskId}')">刷新数据</button>
+    `;
+
+            await loadMetrics(taskId);
+        }
+
+        // 加载任务指标
+        async function loadMetrics(taskId) {
+            try {
+                const response = await fetch(`/api/tasks/${taskId}/metrics`);
+                const metrics = await response.json();
+
+                if (!response.ok) {
+                    document.getElementById('metrics-container').innerHTML = '<p>加载指标数据失败</p>';
+                    return;
+                }
+
+                if (metrics.length === 0) {
+                    document.getElementById('metrics-container').innerHTML = '<p>暂无训练数据，请等待训练开始...</p>';
+                    return;
+                }
+
+                // 准备图表数据
+                const rounds = metrics.map(m => m.round_num);
+                const lossData = metrics.map(m => m.loss);
+                const accuracyData = metrics.map(m => m.accuracy);
+
+                // 创建图表容器
+                document.getElementById('metrics-container').innerHTML = `
+            <div>
+                <h3>损失函数 (Loss)</h3>
+                <canvas id="loss-chart"></canvas>
+            </div>
+            <div>
+                <h3>准确率 (Accuracy)</h3>
+                <canvas id="accuracy-chart"></canvas>
+            </div>
+        `;
+
+                // 销毁之前的图表
+                Object.values(charts).forEach(chart => {
+                    if (chart) chart.destroy();
+                });
+                charts = {};
+
+                // 创建损失函数图表
+                charts.loss = new Chart(document.getElementById('loss-chart'), {
+                    type: 'line',
+                    data: {
+                        labels: rounds,
+                        datasets: [{
+                            label: 'Loss',
+                            data: lossData,
+                            borderColor: 'rgb(255, 99, 132)',
+                            backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                            tension: 0.1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            y: {
+                                beginAtZero: true
+                            }
+                        }
+                    }
+                });
+
+                // 创建准确率图表
+                charts.accuracy = new Chart(document.getElementById('accuracy-chart'), {
+                    type: 'line',
+                    data: {
+                        labels: rounds,
+                        datasets: [{
+                            label: 'Accuracy',
+                            data: accuracyData,
+                            borderColor: 'rgb(54, 162, 235)',
+                            backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                            tension: 0.1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                max: 1
+                            }
+                        }
+                    }
+                });
+
+            } catch (error) {
+                showAlert('加载指标数据失败: ' + error.message, 'error');
+            }
+        }
+
+        // 显示提示信息
+        function showAlert(message, type) {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type}`;
+            alertDiv.textContent = message;
+            alertDiv.style.cssText = `
+        padding: 1rem;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+        background: ${type === 'success' ? '#d4edda' : '#f8d7da'};
+        color: ${type === 'success' ? '#155724' : '#721c24'};
+        border: 1px solid ${type === 'success' ? '#c3e6cb' : '#f5c6cb'};
+    `;
+
+            const mainContent = document.querySelector('.main-content');
+            mainContent.insertBefore(alertDiv, mainContent.firstChild);
+
+            setTimeout(() => {
+                alertDiv.remove();
+            }, 3000);
+        }
+
+        // 场景推理相关功能
+        async function loadCompletedTasks() {
+            try {
+                const response = await fetch('/api/tasks');
+                const tasks = await response.json();
+
+                const select = document.getElementById('inference-task');
+                select.innerHTML = '<option value="">请选择已完成的任务</option>';
+
+                tasks.forEach(task => {
+                    if (task.status === 'completed') {
+                        const option = document.createElement('option');
+                        option.value = task.task_id;
+                        option.textContent = `${task.task_id} (${task.aggregation_algorithm} - ${task.dataset})`;
+                        option.setAttribute('data-task', JSON.stringify(task));
+                        select.appendChild(option);
+                    }
+                });
+            } catch (error) {
+                console.error('加载任务失败:', error);
+                showAlert('加载任务列表失败: ' + error.message, 'error');
+            }
+        }
+
+        // 更新任务信息显示
+        function updateTaskInfo() {
+            const select = document.getElementById('inference-task');
+            const selectedOption = select.options[select.selectedIndex];
+            const taskInfoPanel = document.getElementById('task-info-panel');
+
+            if (selectedOption.value) {
+                const task = JSON.parse(selectedOption.getAttribute('data-task'));
+                document.getElementById('task-info-content').innerHTML = `
+            <p><strong>模型类型:</strong> ${task.model_type}</p>
+            <p><strong>数据集:</strong> ${task.dataset}</p>
+            <p><strong>准确率:</strong> ${(task.accuracy * 100).toFixed(1)}%</p>
+            <p><strong>优化器:</strong> ${task.optimizer}</p>
+        `;
+                taskInfoPanel.style.display = 'block';
+            } else {
+                taskInfoPanel.style.display = 'none';
+            }
+        }
+
+        // 文件处理函数
+        function handleDragOver(event) {
+            event.preventDefault();
+            event.currentTarget.classList.add('dragover');
+        }
+
+        function handleDrop(event) {
+            event.preventDefault();
+            event.currentTarget.classList.remove('dragover');
+
+            const files = event.dataTransfer.files;
+            if (files.length > 0) {
+                handleImageFile(files[0]);
+            }
+        }
+
+        function handleFileSelect(event) {
+            const files = event.target.files;
+            if (files.length > 0) {
+                handleImageFile(files[0]);
+            }
+        }
+
+        function handleImageFile(file) {
+            if (!file.type.startsWith('image/')) {
+                showAlert('请上传图片文件', 'error');
+                return;
+            }
+
+            currentImageFile = file;
+
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                const uploadArea = document.getElementById('image-upload-area');
+                const placeholder = document.getElementById('upload-placeholder');
+                const previewContainer = document.getElementById('image-preview-container');
+                const previewImage = document.getElementById('image-preview');
+
+                // 隐藏占位符，显示预览
+                placeholder.style.display = 'none';
+                previewImage.src = e.target.result;
+                previewContainer.style.display = 'block';
+
+                // 调整上传区域样式
+                uploadArea.style.padding = '1rem';
+                uploadArea.style.minHeight = 'auto';
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function removeImage() {
+            currentImageFile = null;
+            const uploadArea = document.getElementById('image-upload-area');
+            const placeholder = document.getElementById('upload-placeholder');
+            const previewContainer = document.getElementById('image-preview-container');
+
+            // 显示占位符，隐藏预览
+            placeholder.style.display = 'block';
+            previewContainer.style.display = 'none';
+
+            // 恢复上传区域样式
+            uploadArea.style.padding = '2rem';
+            uploadArea.style.minHeight = '200px';
+
+            document.getElementById('file-input').value = '';
+        }
+
+        function updateTaskInfo() {
+            const select = document.getElementById('inference-task');
+            const selectedOption = select.options[select.selectedIndex];
+            const taskInfoPanel = document.getElementById('task-info-panel');
+
+            if (selectedOption.value) {
+                const task = JSON.parse(selectedOption.getAttribute('data-task'));
+                document.getElementById('task-info-content').innerHTML = `
+            <p><strong>模型类型:</strong></p>
+            <p>${task.model_type}</p>
+            <p><strong>数据集:</strong></p>
+            <p>${task.dataset}</p>
+            <p><strong>准确率:</strong></p>
+            <p>${(task.accuracy * 100).toFixed(1)}%</p>
+            <p><strong>优化器:</strong></p>
+            <p>${task.optimizer}</p>
+        `;
+                taskInfoPanel.style.display = 'block';
+            } else {
+                taskInfoPanel.style.display = 'none';
+            }
+        }
+
+
+        // 开始推理
+        async function startInference() {
+            const taskId = document.getElementById('inference-task').value;
+            const description = document.getElementById('text-description').value;
+
+            if (!taskId) {
+                showAlert('请选择训练任务', 'error');
+                return;
+            }
+
+            if (!description.trim()) {
+                showAlert('请输入文字描述', 'error');
+                return;
+            }
+
+            const inferenceBtn = document.getElementById('inference-btn');
+            const loadingAnimation = document.getElementById('loading-animation');
+            const resultContent = document.getElementById('result-content');
+            const detailedAnalysis = document.getElementById('detailed-analysis');
+            const pdfReport = document.getElementById('pdf-report');
+            const intermediateResults = document.getElementById('intermediate-results');
+
+            // 显示加载动画，隐藏之前的结果
+            inferenceBtn.disabled = true;
+            inferenceBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 推理中...';
+            loadingAnimation.style.display = 'block';
+            resultContent.style.display = 'none';
+            detailedAnalysis.style.display = 'none';
+            pdfReport.style.display = 'none';
+            intermediateResults.style.display = 'none';
+
+            // 重置进度步骤
+            resetProgressSteps();
+
+            try {
+                const formData = new FormData();
+                formData.append('task_id', taskId);
+                formData.append('description', description);
+
+                if (currentImageFile) {
+                    formData.append('image', currentImageFile);
+                }
+
+                // 第一阶段：图像处理
+                activateStep('step-image', '图像处理完成');
+
+                // 模拟图像处理延迟
+                await delay(1000);
+
+                // 第二阶段：模型推理
+                activateStep('step-model', '模型推理中...');
+
+                const response = await fetch('/api/inference', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    // 显示模型输出结果
+                    displayModelOutput(result.prediction || result.detailed_analysis);
+                    intermediateResults.style.display = 'block';
+
+                    // 第三阶段：报告生成
+                    activateStep('step-report', '报告生成中...');
+
+                    // 短暂延迟以显示报告生成过程
+                    await delay(1500);
+
+                    // 完成所有步骤
+                    completeProgressSteps();
+
+                    // 显示最终结果
+                    setTimeout(() => {
+                        displayFinalInferenceResult(result);
+                        if (result.report_url) {
+                            currentReportUrl = result.report_url;
+                            document.getElementById('pdf-report').style.display = 'block';
+                        }
+                        showAlert('推理完成！诊断报告已生成', 'success');
+                    }, 500);
+
+                } else {
+                    showAlert('推理失败: ' + result.error, 'error');
+                    resetProgressSteps();
+                }
+            } catch (error) {
+                showAlert('网络错误: ' + error.message, 'error');
+                resetProgressSteps();
+            } finally {
+                inferenceBtn.disabled = false;
+                inferenceBtn.innerHTML = '<i class="fas fa-play"></i> 开始推理';
+            }
+        }
+
+        // 重置进度步骤
+        function resetProgressSteps() {
+            const steps = document.querySelectorAll('.progress-steps .step');
+            steps.forEach(step => {
+                step.classList.remove('active', 'completed');
+                step.innerHTML = step.id === 'step-image' ? '图像处理' :
+                    step.id === 'step-model' ? '模型推理' : '报告生成';
+            });
+        }
+
+        // 激活步骤
+        function activateStep(stepId, statusText) {
+            const step = document.getElementById(stepId);
+            step.classList.add('active');
+            if (statusText) {
+                step.innerHTML = `${statusText} <i class="fas fa-check" style="margin-left: 5px;"></i>`;
+            }
+        }
+
+        // 完成所有进度步骤
+        function completeProgressSteps() {
+            const steps = document.querySelectorAll('.progress-steps .step');
+            steps.forEach(step => {
+                step.classList.add('completed');
+                step.classList.add('active');
+            });
+        }
+
+        // 显示模型输出结果
+        function displayModelOutput(modelOutput) {
+            const modelOutputElement = document.getElementById('model-output');
+            modelOutputElement.textContent = modelOutput;
+        }
+
+        // 显示最终推理结果
+        function displayFinalInferenceResult(result) {
+            const loadingAnimation = document.getElementById('loading-animation');
+            const resultContent = document.getElementById('result-content');
+            const detailedAnalysis = document.getElementById('detailed-analysis');
+            const analysisContent = document.getElementById('analysis-content');
+
+            // 隐藏加载动画，显示结果
+            loadingAnimation.style.display = 'none';
+            resultContent.style.display = 'block';
+
+            // 构建主要结果卡片
+            resultContent.innerHTML = `
+        <div class="result-grid">
+            <div class="result-card confidence">
+                <div class="result-header">
+                    <div class="result-icon">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <div class="result-title">置信度</div>
+                </div>
+                <div class="result-value confidence-value">
+                    ${result.confidence ? (result.confidence * 100).toFixed(1) + '%' : '95.0%'}
+                </div>
+            </div>
+            
+            <div class="result-card info">
+                <div class="result-header">
+                    <div class="result-icon">
+                        <i class="fas fa-info-circle"></i>
+                    </div>
+                    <div class="result-title">模型信息</div>
+                </div>
+                <div class="result-value">
+                    <div><strong>任务ID:</strong> ${result.task_id}</div>
+                    <div><strong>算法:</strong> ${result.task_info.aggregation_algorithm}</div>
+                    <div><strong>数据集:</strong> ${result.task_info.dataset}</div>
+                    <div><strong>准确率:</strong> ${(result.task_info.accuracy * 100).toFixed(1)}%</div>
+                </div>
+            </div>
+            
+            <div class="result-card time">
+                <div class="result-header">
+                    <div class="result-icon">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <div class="result-title">处理时间</div>
+                </div>
+                <div class="result-value time-value">
+                    ${result.processing_time || 6.9}秒
+                </div>
+            </div>
+        </div>
+    `;
+
+            // 处理详细分析内容
+            if (result.detailed_analysis || result.prediction) {
+                const analysisText = result.detailed_analysis || result.prediction;
+                analysisContent.textContent = analysisText;
+                detailedAnalysis.style.display = 'block';
+            }
+        }
+
+        // 延迟函数
+        function delay(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        // PDF预览和下载
+        function previewPDF() {
+            if (!currentReportUrl) {
+                showAlert('暂无报告可预览', 'error');
+                return;
+            }
+
+            const previewContainer = document.getElementById('pdf-preview-container');
+            const previewIframe = document.getElementById('pdf-preview');
+
+            previewIframe.src = currentReportUrl;
+            previewContainer.style.display = 'block';
+        }
+
+        function downloadPDF() {
+            if (!currentReportUrl) {
+                showAlert('暂无报告可下载', 'error');
+                return;
+            }
+
+            const link = document.createElement('a');
+            link.href = currentReportUrl;
+            link.download = `联邦学习推理报告_${new Date().toISOString().split('T')[0]}.pdf`;
+            link.click();
+        }
+
+        // 在DOM加载完成后初始化
+        document.addEventListener('DOMContentLoaded', function () {
+            initializePage();
+
+            // 设置定时刷新（如果有选中的任务）
+            setInterval(() => {
+                if (currentTask && document.getElementById('task-monitor').style.display !== 'none') {
+                    loadMetrics(currentTask);
+                }
+            }, 10000);
+        });
+    </script>
+</body>
+
+</html>
