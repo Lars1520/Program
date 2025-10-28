@@ -85,7 +85,23 @@
             min-height: 100vh;
             display: flex;
         }
+        /* 登出按钮样式 */
+        .logout-btn {
+            background: transparent;
+            border: none;
+            color: var(--gray);
+            font-size: 1.2rem;
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 6px;
+            transition: all 0.3s ease;
+            margin-left: 1rem;
+        }
 
+        .logout-btn:hover {
+            background: rgba(102, 126, 234, 0.1);
+            color: var(--primary);
+        }
         /* 侧边栏样式 */
         .sidebar {
             width: var(--sidebar-width);
@@ -908,6 +924,134 @@
                 transform: translateY(0);
             }
         }
+/* 优化推理页面布局 */
+.inference-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem; /* 减少整体间距 */
+}
+
+.inference-step-content {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem; /* 减少列间距 */
+    align-items: start;
+    min-height: 500px; /* 设置最小高度 */
+}
+
+.step-left-panel,
+.step-right-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem; /* 减少内部元素间距 */
+    height: 100%;
+}
+
+/* 优化卡片内边距 */
+.inference-form,
+.inference-result {
+    background: white;
+    padding: 1.25rem; /* 减少内边距 */
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    height: 100%;
+}
+
+/* 优化文件上传区域 */
+.file-upload {
+    border: 2px dashed #ddd;
+    padding: 1.5rem; /* 减少内边距 */
+    text-align: center;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: #fafbfc;
+    min-height: 180px; /* 调整最小高度 */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+    /* 优化文本区域 */
+    #text-description {
+        min-height: 180px; /* 调整高度 */
+        resize: vertical;
+        height: 100%;
+    }
+
+    /* 优化步骤指示器间距 */
+    .steps {
+        margin-bottom: 1.5rem; /* 减少底部间距 */
+    }
+
+    /* 优化表单组间距 */
+    .inference-form .form-group {
+        margin-bottom: 1rem; /* 减少间距 */
+    }
+
+    /* 优化按钮组布局 */
+    .form-group:last-child {
+        margin-top: auto; /* 确保按钮在底部 */
+        padding-top: 1rem;
+    }
+
+    /* 优化结果区域 */
+    .result-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 0.75rem; /* 减少间距 */
+        margin-bottom: 1rem;
+    }
+
+    /* 优化详细分析区域 */
+    #analysis-content {
+        max-height: 280px; /* 调整高度 */
+        min-height: 150px;
+        font-size: 0.9rem;
+        line-height: 1.5;
+    }
+
+    /* 响应式调整 */
+    @media (max-width: 1024px) {
+        .inference-step-content {
+            grid-template-columns: 1fr;
+            gap: 1rem;
+            min-height: auto;
+        }
+        
+        .step-left-panel,
+        .step-right-panel {
+            min-height: auto;
+            gap: 0.75rem;
+        }
+        
+        .file-upload {
+            min-height: 160px;
+            padding: 1rem;
+        }
+        
+        #text-description {
+            min-height: 160px;
+        }
+    }
+
+    /* 优化加载动画区域 */
+    .spinner-container {
+        margin-bottom: 1rem; /* 减少间距 */
+    }
+
+    .progress-steps {
+        margin: 1rem auto 0.5rem; /* 调整间距 */
+    }
+
+    /* 优化中间结果区域 */
+    #intermediate-results {
+        margin-top: 1rem; /* 减少间距 */
+    }
+
+
+
     </style>
 </head>
 
@@ -949,13 +1093,18 @@
                 <h1>联邦学习平台</h1>
                 <p>分布式机器学习任务管理与监控系统</p>
             </div>
-            <div class="user-info">
-                <div class="user-avatar">AD</div>
-                <div>
-                    <div style="font-weight: 600;">管理员</div>
-                    <div style="font-size: 0.85rem; color: var(--gray);">在线</div>
-                </div>
+            <!-- 修改后的用户信息区域 -->
+        <div class="user-info">
+            <div class="user-avatar">AD</div>
+            <div>
+                <div style="font-weight: 600;">管理员</div>
+                <div style="font-size: 0.85rem; color: var(--gray);">在线</div>
             </div>
+            <!-- 添加登出按钮 -->
+            <button class="logout-btn" onclick="logout()" title="退出登录">
+                <i class="fas fa-sign-out-alt"></i>
+            </button>
+        </div>
         </div>
 
         <!-- 创建任务标签页 -->
@@ -2149,6 +2298,33 @@
                 }
             }, 10000);
         });
+        // 登出功能
+        async function logout() {
+            if (!confirm('确定要退出登录吗？')) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/auth/logout', {
+                    method: 'POST'
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showAlert('退出登录成功', 'success');
+                    setTimeout(() => {
+                        window.location.href = '/';
+                    }, 1000);
+                } else {
+                    showAlert('退出登录失败: ' + result.error, 'error');
+                }
+            } catch (error) {
+                showAlert('网络错误: ' + error.message, 'error');
+            }
+        }
+
+
     </script>
 </body>
 
